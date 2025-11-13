@@ -1,0 +1,9 @@
+<Project>
+  <!-- Force legacy projects that still target .NET 3.5 to resolve mscorlib from the .NET 2.0 CLR -->
+  <PropertyGroup>
+    <MSBuildTreatAsLocalProperty>$(MSBuildTreatAsLocalProperty);FrameworkPathOverride</MSBuildTreatAsLocalProperty>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFrameworkVersion)' == 'v3.5'">
+    <FrameworkPathOverride>$(SystemRoot)\Microsoft.NET\Framework\v2.0.50727\</FrameworkPathOverride>
+  </PropertyGroup>
+</Project>

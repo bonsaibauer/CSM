@@ -1,0 +1,30 @@
+<Project>
+  <Target Name="FixWindowsPostBuildEvent"
+          Condition="$([MSBuild]::IsOsPlatform('windows'))"
+          BeforeTargets="PostBuildEvent">
+    <PropertyGroup>
+      <PostBuildEvent>powershell -ExecutionPolicy Unrestricted -Command "&amp; '$(MSBuildThisFileDirectory)scripts\build.ps1' -OutputDirectory '$(TargetDir)' -Install"</PostBuildEvent>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="SetLegacyFrameworkOverride"
+          Condition="'$(TargetFrameworkVersion)' == 'v3.5'"
+          BeforeTargets="ResolveReferences">
+    <PropertyGroup>
+      <FrameworkPathOverride>$(SystemRoot)\Microsoft.NET\Framework\v2.0.50727\</FrameworkPathOverride>
+    </PropertyGroup>
+  </Target>
+
+  <Target Name="ForceLegacyFrameworkPaths"
+          Condition="'$(TargetFrameworkVersion)' == 'v3.5'"
+          BeforeTargets="CoreCompile">
+    <ItemGroup>
+      <ReferencePath Remove="$(MSBuildFrameworkToolsPath)mscorlib.dll" />
+      <ReferencePathWithRefAssemblies Remove="$(MSBuildFrameworkToolsPath)mscorlib.dll" />
+      <ReferenceDependencyPaths Remove="$(MSBuildFrameworkToolsPath)mscorlib.dll" />
+      <ReferenceCopyLocalPaths Remove="$(MSBuildFrameworkToolsPath)mscorlib.dll" />
+      <ReferencePath Include="$(SystemRoot)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll" />
+      <ReferencePathWithRefAssemblies Include="$(SystemRoot)\Microsoft.NET\Framework\v2.0.50727\mscorlib.dll" />
+    </ItemGroup>
+  </Target>
+</Project>
