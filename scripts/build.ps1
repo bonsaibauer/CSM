@@ -163,11 +163,58 @@ If ($Build)
         Write-Host "Using MSBuild at: $msbuild"
     }
 
-    & $msbuild "..\CSM.sln" /restore /t:CSM /p:Configuration=Release /p:Platform="Any CPU"
-    If ($LastExitCode -ne 0)
+    $buildArgs = @(
+        "..\CSM.sln"
+        "/restore"
+        "/t:CSM"
+        "/p:Configuration=Release"
+        "/p:Platform=Any CPU"
+        "/p:PostBuildEvent="
+    )
+
+    & $msbuild @buildArgs
+    $buildExitCode = $LastExitCode
+
+    If (($buildExitCode -ne 0) -And $IsWindows)
+    {
+        # VS2022 may mix .NET 4.0 mscorlib with 3.5 System.Core on legacy projects.
+        # Retry with explicit legacy framework paths to keep a compatible 3.5 reference set.
+        $legacyFrameworkPath = Join-Path $env:WINDIR "Microsoft.NET\Framework\v2.0.50727"
+        $net35ReferencePath = Join-Path ${env:ProgramFiles(x86)} "Reference Assemblies\Microsoft\Framework\v3.5"
+
+        $legacyMscorlib = Join-Path $legacyFrameworkPath "mscorlib.dll"
+        $net35SystemCore = Join-Path $net35ReferencePath "System.Core.dll"
+
+        If ((Test-Path $legacyMscorlib) -And (Test-Path $net35SystemCore))
+        {
+            Write-Host "[CSM Build Script] Initial build failed. Retrying with legacy .NET 3.5 reference fallback."
+
+            $fallbackBuildArgs = @(
+                "..\CSM.sln"
+                "/restore"
+                "/t:CSM"
+                "/p:Configuration=Release"
+                "/p:Platform=Any CPU"
+                "/p:PostBuildEvent="
+                "/p:FrameworkPathOverride=$legacyFrameworkPath"
+                "/p:ReferencePath=$net35ReferencePath"
+            )
+
+            & $msbuild @fallbackBuildArgs
+            $buildExitCode = $LastExitCode
+        }
+        Else
+        {
+            Write-Host "[CSM Build Script] Build fallback prerequisites are missing."
+            Write-Host "[CSM Build Script] Expected: $legacyMscorlib"
+            Write-Host "[CSM Build Script] Expected: $net35SystemCore"
+        }
+    }
+
+    If ($buildExitCode -ne 0)
     {
         Write-Host "[CSM Build Script] Build failed!"
-        exit $LastExitCode
+        exit $buildExitCode
     }
     Write-Host "[CSM Build Script] Build Complete!"
 }
